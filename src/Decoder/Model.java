@@ -7,7 +7,7 @@ public class Model {
     private Map<Character, Double> dictionary;  //map for letter and her probability
     private String[] stringToDecode;    //binary code to decode
     private int[] wordsLength;    //binary words lengths
-    private String input= new String();
+    private String input= new String(); //input String
 
 
     public Model() throws  Exception

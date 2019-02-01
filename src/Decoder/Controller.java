@@ -5,16 +5,14 @@ import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 
 public class Controller {
-    private String[] binaryValues;
-    private double[] probability;
-    private char[] refLetters;
+    private String[] binaryValues;  //binary values read from file
+    private double[] probability;   //probability for each letter from dictionary
+    private char[] refLetters;  //dictionary letters
 
-    private double[] decimalValues;
-    private char[] decodedLetters;
-    private int[] sequenceLength;
-    private double[] section;
-
-
+    private double[] decimalValues; //calculated decimal values from binary values
+    private char[] decodedLetters;  //decoded letters
+    private int[] sequenceLength;   //sequence length from file
+    private double[] section;   //probability estimate
 
     public Controller()
     {
@@ -45,6 +43,7 @@ public class Controller {
 
     }
 
+    //conversion binary fraction to decimal
     private Double convertBinToDecimal(String number) {
         char[] symbol=new char[number.length()];
         int temp;
@@ -66,7 +65,6 @@ public class Controller {
         return result;
     }
 
-
     private void calculateResult() {
         section = new double[probability.length + 1];
         int size = sequenceLength[sequenceLength.length - 1];
@@ -86,7 +84,7 @@ public class Controller {
                 else
                     section[m] = section[m - 1] + probability[m - 1];
             }
-
+            //decoding of letters based on probabilities and sequence length
             for (int j = 0; j < sequenceLength[n] - sequenceLength[n - 1]; j++) {
                 for (int k = 0; k <= refLetters.length; k++) {
                     if (decimalValues[n - 1] <= section[k] && sequenceLength[n] > 0) {
@@ -99,10 +97,8 @@ public class Controller {
                         for (int l = 1; l < section.length - 1; l++)
                             section[l] = section[l - 1] + probability[l - 1] * (segmentTempMax - segmentTempMin);
                         break;
-
                     }
                 }
-
                 if (sequenceLength[n] == 1)
                     break;
             }
@@ -112,22 +108,17 @@ public class Controller {
 
     private void saveToFile()
     {
-
         try {
             File fileDecode = new File("src\\resources\\DecodedString.txt");
             PrintWriter outDecode = new PrintWriter(fileDecode);
-
             for (int i=0; i<decodedLetters.length; i++)
             {
                 if(decodedLetters[i]!='\u0000')
                 outDecode.print(decodedLetters[i]);
             }
-
             outDecode.close();
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
     }
-
-
 }
