@@ -12,21 +12,19 @@ public class Controller {
     private double[] probability;   //input probability frome file
     private char[] refLetters;  //input dictionary letters from file
 
-    private String[] words; //input string divided into words
-    private char[][] letters;   //words divided into letters
+    private char[] letters;   //words divided into letters
     private double[] section;   //probability estimate
-    private double segmentMinTemp;  //minimal segment value for coding string
-    private double segmentMaxTemp;  //maximal segment value for coding string
-    private double[][] segmentMin;  //table with minimal segment values
-    private double[][] segmentMax;  //table with maximal segment values
-    private int[][] length; //table with coded string length
+    private double segmentTempMin;  //minimal segment value for coding string
+    private double segmentTempMax;  //maximal segment value for coding string
+    private double[] segmentMin;  //table with minimal segment values
+    private double[] segmentMax;  //table with maximal segment values
+    private int[] length; //table with coded string length
 
-    private double[][] decimalResult;
-    private String[][] binaryResult;
+    private double[] decimalResult;
+    private String[] binaryResult;
 
-    private final double precision=1.0E-12;
-    private final int maximalWordLenth=50;
-    private final int binaryIteration=100;
+    private final double precision=1.0E-10;
+    private final int binaryIteration=50;
 
     public Controller()
     {
@@ -45,6 +43,7 @@ public class Controller {
                 refLetters[i]=tempLett[i].charValue();
                 probability[i]=tempProb[i].doubleValue();
             }
+
             initializeInput();
             calculateResult();
             saveToFiles();
@@ -59,17 +58,8 @@ public class Controller {
         input = input.replaceAll("[\\t\\n\\r]", " ");
         input = input.replaceAll("[^a-ząęśćńźółż ]", "");
         input = input.trim().replaceAll(" +", " ");
-
-        //split input string to words
-        words = input.split(" ");
-
-        //split words to letters
-        letters = new char[words.length][maximalWordLenth];
-        for (int i = 0; i < words.length; i++) {
-            for (int j = 0; j < words[i].length(); j++) {
-                letters[i] = words[i].toCharArray();
-            }
-        }
+        letters = new char[input.length()];
+        letters = input.toCharArray();
 
         //conversion of probability into an estimate
         section = new double[probability.length+1];
@@ -84,67 +74,67 @@ public class Controller {
         }
     }
 
-    public void calculateResult() throws Exception {
-        decimalResult = new double[letters.length][10];
-        binaryResult = new String[letters.length][10];
-        segmentMin = new double[letters.length][10];
-        segmentMax = new double[letters.length][10];
-        length = new int[letters.length][10 + 1];
+    public void calculateResult() {
+        decimalResult = new double[letters.length];
+        binaryResult = new String[letters.length];
+        segmentMin = new double[letters.length];
+        segmentMax = new double[letters.length];
+        length = new int[letters.length];
 
 
         //result calculating
+        segmentTempMin = 0.0;
+        segmentTempMax = 1.0;
+        double tempmin;
+        double tempmax;
+        int index = 0;
+
+        //min and max sections calculations
         for (int i = 0; i < letters.length; i++) {
-            segmentMinTemp = 0.0;
-            segmentMaxTemp = 1.0;
-            double tempmin;
-            double tempmax;
-            int index = 0;
-            for (int j = 0; j < letters[i].length; j++) {
-                for (int k = 0; k < section.length - 1; k++) {
-                    if (letters[i][j] == refLetters[k]) {
-                        if (section[k] != 1.0 || section[k + 1] != 1.0) {
-                            if (segmentMaxTemp - segmentMinTemp < precision) {
-                                segmentMin[i][index] = segmentMinTemp;
-                                segmentMax[i][index] = segmentMaxTemp;
-                                length[i][index] = 0;
-                                index++;
-                                length[i][index] = j;
-                                segmentMinTemp = 0.0;
-                                segmentMaxTemp = 1.0;
-                            }
-                            tempmin=segmentMinTemp;
-                            tempmax=segmentMaxTemp;
-                            segmentMinTemp=tempmin+(tempmax-tempmin)*section[k];
-                            segmentMaxTemp=tempmin+(tempmax-tempmin)*section[k+1];
-
-                            if (index <= letters[i].length - 1)
-                                length[i][index + 1] = j + 1;
-                            else
-                                throw new Exception("Word length must be less than 50 characters");
-                        }
-                    }
-                }
-            }
-            segmentMin[i][index] = segmentMinTemp;
-            segmentMax[i][index] = segmentMaxTemp;
-
-            for (int l = 0; l < decimalResult[i].length; l++) {
-                if (length[i][l + 1] > 0) {
-                    decimalResult[i][l] = 0.5;
-                    for (int j = 0; j < binaryIteration; j++) {
-                        if (decimalResult[i][l] < segmentMin[i][l])
-                            decimalResult[i][l] = decimalResult[i][l] + Math.pow(0.5, j + 1);
-                        else if (decimalResult[i][l] > segmentMax[i][l])
-                            decimalResult[i][l] = decimalResult[i][l] - Math.pow(0.5, j + 1);
-                        else
+            for (int j = 0; j < refLetters.length; j++) {
+                if (letters[i] == refLetters[j]) {
+                    if (section[j] != 1.0 || section[j + 1] != 1.0) {
+                        if (segmentTempMax - segmentTempMin < precision) {
+                            index++;
+                            length[index]=i;
+                            i=i-1;
+                            segmentTempMin =0.0;
+                            segmentTempMax =1.0;
                             break;
+                        }
+                        tempmin= segmentTempMin;
+                        tempmax= segmentTempMax;
+                        segmentTempMin =tempmin+(tempmax-tempmin)*section[j];
+                        segmentTempMax =tempmin+(tempmax-tempmin)*section[j+1];
+                        segmentMin[index]= segmentTempMin;
+                        segmentMax[index]= segmentTempMax;
+                        length[index+1]=i+1;
                     }
-                    binaryResult[i][l]=convert(decimalResult[i][l]);
-                    binaryResult[i][l]=parse(binaryResult[i][l]);
                 }
             }
         }
+
+        //calculating binary point of section
+        for (int l=0; l<decimalResult.length;l++)
+        {
+            if (length[l] > 0 || l==0) {
+                decimalResult[l]=0.5;
+                for(int j=0; j<binaryIteration;j++)
+                {
+                    if (decimalResult[l] < segmentMin[l])
+                        decimalResult[l] = decimalResult[l] + Math.pow(0.5, j + 1);
+                    else if (decimalResult[l] > segmentMax[l])
+                        decimalResult[l] = decimalResult[l] - Math.pow(0.5, j + 1);
+                    else
+                        break;
+                }
+                binaryResult[l]=convert(decimalResult[l]);
+                binaryResult[l]=parse(binaryResult[l]);
+            }
+            binaryResult[index+1]=null;
+        }
     }
+
     // conversion decimal fraction to binary
     private String convert(double number) {
         int n = 50;  // precision
@@ -191,24 +181,18 @@ public class Controller {
             File fileCode = new File("src\\resources\\CodedString.txt");
             PrintWriter outCode = new PrintWriter(fileCode);
 
-            File fileWord = new File("src\\resources\\WordsLength.txt");
-            PrintWriter outWord = new PrintWriter(fileWord);
-
             for (int i=0; i<binaryResult.length; i++) {
-                for (int j = 0; j < binaryResult[i].length; j++) {
-                    if(binaryResult[i][j]!=null)
-                        outCode.print(binaryResult[i][j]+" ");
-                }
-                outCode.println();
+                if(binaryResult[i]!=null)
+                    outCode.println(binaryResult[i]);
             }
             outCode.close();
 
+            File fileWord = new File("src\\resources\\WordsLength.txt");
+            PrintWriter outWord = new PrintWriter(fileWord);
+
             for (int i=0; i<length.length; i++) {
-                for (int j = 0; j < length[i].length; j++) {
-                    if(length[i][j]!=0)
-                        outWord.print(length[i][j]+" ");
-                }
-                outWord.println();
+                if(length[i]!=0 || i==0)
+                    outWord.println(length[i]);
             }
             outWord.close();
         } catch (FileNotFoundException e) {

@@ -1,5 +1,5 @@
 package Coder;
-public class Main {
+public class Coder {
     public static void main(String[] args) {
         Controller c = new Controller();
     }
